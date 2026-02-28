@@ -99,7 +99,7 @@ function renderAgentStrip() {
         const s = a.status || 'offline';
         const classes = ['agent-chip',
             s === 'working' ? 'is-working' : '',
-            a.role?.toLowerCase() === 'orchestrator' ? 'is-orchestrator' : ''
+            a.role?.toLowerCase().includes('orchestrator') ? 'is-orchestrator' : ''
         ].filter(Boolean).join(' ');
 
         return `<div class="${classes}" style="--chip-accent:${a.accent_color || '#3b82f6'}">
@@ -166,7 +166,7 @@ function renderAgentsView() {
         const s = a.status || 'offline';
         const classes = ['agent-full-card',
             s === 'working' ? 'is-working' : '',
-            a.role?.toLowerCase() === 'orchestrator' ? 'is-orchestrator' : ''
+            a.role?.toLowerCase().includes('orchestrator') ? 'is-orchestrator' : ''
         ].filter(Boolean).join(' ');
 
         return `<div class="${classes}" style="--card-accent:${a.accent_color || '#3b82f6'}">
