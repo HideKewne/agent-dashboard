@@ -1,6 +1,6 @@
 // ===========================
-// Agent Control Center
-// Supabase Realtime Dashboard
+// Agent HQ - Dashboard Engine
+// Supabase Realtime + Kanban
 // ===========================
 
 const SUPABASE_URL = 'https://dpdtxmhxyosunfryocqn.supabase.co';
@@ -8,230 +8,318 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// State
 let agents = [];
+let tasks = [];
 let activities = [];
-let startTime = Date.now();
+let draggedTask = null;
 
-// ---- DOM Elements ----
-const agentsGrid = document.getElementById('agentsGrid');
-const activityList = document.getElementById('activityList');
-const agentCount = document.getElementById('agentCount');
-const activeCount = document.getElementById('activeCount');
-const uptimeEl = document.getElementById('uptime');
-const supabaseStatus = document.getElementById('supabaseStatus');
-const lastUpdate = document.getElementById('lastUpdate');
+// DOM refs
+const agentStrip = document.getElementById('agentStrip');
+const activityItems = document.getElementById('activityItems');
+const lastSyncEl = document.getElementById('lastSync');
 const connectionStatus = document.getElementById('connectionStatus');
-const clearActivity = document.getElementById('clearActivity');
+const clearActivityBtn = document.getElementById('clearActivity');
+const searchInput = document.getElementById('searchInput');
+const agentsFullGrid = document.getElementById('agentsFullGrid');
+const activityFullList = document.getElementById('activityFullList');
 
-// ---- Initialize ----
+// ===== INIT =====
 async function init() {
-    await fetchAgents();
-    await fetchActivity();
-    subscribeToChanges();
-    updateUptime();
-    setInterval(updateUptime, 60000);
+    await Promise.all([fetchAgents(), fetchTasks(), fetchActivity()]);
+    subscribeRealtime();
+    setupNavigation();
+    setupDragAndDrop();
+    setupSearch();
+    clearActivityBtn.addEventListener('click', () => { activities = []; renderActivityRail(); });
     setInterval(updateRelativeTimes, 30000);
-    clearActivity.addEventListener('click', () => {
-        activities = [];
-        renderActivity();
-    });
 }
 
-// ---- Fetch Initial Data ----
+// ===== DATA FETCHING =====
 async function fetchAgents() {
     const { data, error } = await supabase
-        .from('agents')
-        .select('*')
-        .order('created_at', { ascending: true });
+        .from('agents').select('*').order('created_at');
+    if (!error && data) { agents = data; renderAgentStrip(); }
+}
 
-    if (error) {
-        console.error('Error fetching agents:', error);
-        supabaseStatus.textContent = 'Error';
-        supabaseStatus.style.color = 'var(--status-blocked)';
-        return;
-    }
-
-    agents = data || [];
-    supabaseStatus.textContent = 'Connected';
-    supabaseStatus.style.color = 'var(--status-working)';
-    renderAgents();
-    updateStats();
+async function fetchTasks() {
+    const { data, error } = await supabase
+        .from('tasks').select('*').order('position').order('created_at');
+    if (!error && data) { tasks = data; renderKanban(); }
 }
 
 async function fetchActivity() {
     const { data, error } = await supabase
-        .from('activity_log')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-    if (error) {
-        console.error('Error fetching activity:', error);
-        return;
-    }
-
-    activities = data || [];
-    renderActivity();
+        .from('activity_log').select('*').order('created_at', { ascending: false }).limit(50);
+    if (!error && data) { activities = data; renderActivityRail(); }
 }
 
-// ---- Realtime Subscriptions ----
-function subscribeToChanges() {
-    // Subscribe to agent changes
-    supabase
-        .channel('agents-changes')
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'agents'
-        }, (payload) => {
-            handleAgentChange(payload);
+// ===== REALTIME =====
+function subscribeRealtime() {
+    supabase.channel('all-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'agents' }, (p) => {
+            handleChange(agents, p);
+            renderAgentStrip();
+            renderAgentsView();
+            syncLastUpdate();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (p) => {
+            handleChange(tasks, p);
+            renderKanban();
+            syncLastUpdate();
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activity_log' }, (p) => {
+            activities.unshift(p.new);
+            if (activities.length > 100) activities.length = 100;
+            renderActivityRail();
+            renderActivityView();
+            syncLastUpdate();
         })
         .subscribe((status) => {
-            if (status === 'SUBSCRIBED') {
-                updateConnectionUI(true);
-            }
+            updateConnection(status === 'SUBSCRIBED');
         });
-
-    // Subscribe to activity log
-    supabase
-        .channel('activity-changes')
-        .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'activity_log'
-        }, (payload) => {
-            handleNewActivity(payload.new);
-        })
-        .subscribe();
 }
 
-function handleAgentChange(payload) {
-    const { eventType, new: newRecord, old: oldRecord } = payload;
-
+function handleChange(arr, payload) {
+    const { eventType } = payload;
     if (eventType === 'UPDATE') {
-        const idx = agents.findIndex(a => a.id === newRecord.id);
-        if (idx !== -1) {
-            agents[idx] = newRecord;
-        }
+        const idx = arr.findIndex(r => r.id === payload.new.id);
+        if (idx !== -1) arr[idx] = payload.new;
     } else if (eventType === 'INSERT') {
-        agents.push(newRecord);
+        arr.push(payload.new);
     } else if (eventType === 'DELETE') {
-        agents = agents.filter(a => a.id !== oldRecord.id);
+        const idx = arr.findIndex(r => r.id === payload.old.id);
+        if (idx !== -1) arr.splice(idx, 1);
     }
-
-    renderAgents();
-    updateStats();
-    updateLastUpdate();
 }
 
-function handleNewActivity(record) {
-    activities.unshift(record);
-    if (activities.length > 100) activities = activities.slice(0, 100);
-    renderActivity();
-    updateLastUpdate();
-}
-
-// ---- Render Functions ----
-function renderAgents() {
-    agentsGrid.innerHTML = agents.map(agent => {
-        const statusClass = agent.status || 'offline';
-        const isWorking = statusClass === 'working';
-        const isOrchestrator = agent.role === 'orchestrator';
-        const cardClasses = [
-            'agent-card',
-            isWorking ? 'is-working' : '',
-            isOrchestrator ? 'is-orchestrator' : ''
+// ===== RENDER: AGENT STRIP =====
+function renderAgentStrip() {
+    agentStrip.innerHTML = agents.map(a => {
+        const s = a.status || 'offline';
+        const classes = ['agent-chip',
+            s === 'working' ? 'is-working' : '',
+            a.role?.toLowerCase() === 'orchestrator' ? 'is-orchestrator' : ''
         ].filter(Boolean).join(' ');
 
-        return `
-            <div class="${cardClasses}" style="--card-accent: ${agent.accent_color || '#3b82f6'}">
-                <div class="agent-card-header">
-                    <div class="agent-avatar">${agent.avatar_emoji || '🤖'}</div>
-                    <div class="agent-status-badge ${statusClass}">
-                        <span class="agent-status-dot"></span>
-                        ${capitalize(statusClass)}
-                    </div>
-                </div>
-                <div class="agent-name">${escapeHtml(agent.name)}</div>
-                <div class="agent-role">${escapeHtml(agent.role || 'Agent')}</div>
-                <div class="agent-task">
-                    <div class="agent-task-label">Current Task</div>
-                    <div class="agent-task-text ${!agent.current_task ? 'empty' : ''}">
-                        ${agent.current_task ? escapeHtml(agent.current_task) : 'No task assigned'}
-                    </div>
-                </div>
-                <div class="agent-footer">
-                    <span class="agent-last-seen" data-time="${agent.last_seen || agent.updated_at}">
-                        ${timeAgo(agent.last_seen || agent.updated_at)}
-                    </span>
-                    <span class="agent-accent-dot" style="background: ${agent.accent_color || '#3b82f6'}"></span>
-                </div>
+        return `<div class="${classes}" style="--chip-accent:${a.accent_color || '#3b82f6'}">
+            <div class="chip-avatar">${a.avatar_emoji || '🤖'}</div>
+            <div class="chip-info">
+                <div class="chip-name">${esc(a.name)}</div>
+                <div class="chip-role">${esc(a.role || 'Agent')}</div>
             </div>
-        `;
+            <div class="chip-status ${s}">
+                <span class="chip-status-dot"></span>
+                ${cap(s)}
+            </div>
+        </div>`;
     }).join('');
 }
 
-function renderActivity() {
+// ===== RENDER: KANBAN =====
+function renderKanban() {
+    const statuses = ['todo', 'in_progress', 'done', 'archived'];
+    statuses.forEach(status => {
+        const col = document.querySelector(`[data-drop="${status}"]`);
+        const countEl = document.querySelector(`[data-count="${status}"]`);
+        const filtered = tasks.filter(t => t.status === status);
+        countEl.textContent = filtered.length;
+
+        col.innerHTML = filtered.map(t => {
+            const agent = agents.find(a => a.id === t.agent_id);
+            return `<div class="task-card" draggable="true" data-task-id="${t.id}">
+                <div class="task-card-title">${esc(t.title)}</div>
+                <div class="task-card-meta">
+                    <div class="task-card-agent">
+                        <span class="task-agent-dot" style="background:${agent?.accent_color || '#6b7280'}"></span>
+                        ${esc(agent?.name || 'Unassigned')}
+                    </div>
+                    <div class="task-card-date">${formatDate(t.created_at)}</div>
+                </div>
+            </div>`;
+        }).join('');
+    });
+}
+
+// ===== RENDER: ACTIVITY RAIL =====
+function renderActivityRail() {
     if (activities.length === 0) {
-        activityList.innerHTML = '<div class="activity-empty"><span>No activity yet</span></div>';
+        activityItems.innerHTML = '<div class="rail-empty">No activity yet</div>';
         return;
     }
-
-    activityList.innerHTML = activities.map(item => {
+    activityItems.innerHTML = activities.map(item => {
         const agent = agents.find(a => a.id === item.agent_id);
         const color = agent?.accent_color || '#3b82f6';
-
-        return `
-            <div class="activity-item">
-                <span class="activity-dot" style="background: ${color}"></span>
-                <div class="activity-content">
-                    <div class="activity-text">
-                        <strong>${escapeHtml(item.agent_name)}</strong>
-                        ${escapeHtml(item.action)}${item.details ? ': ' + escapeHtml(item.details) : ''}
-                    </div>
-                    <div class="activity-time" data-time="${item.created_at}">${timeAgo(item.created_at)}</div>
-                </div>
+        return `<div class="act-item">
+            <span class="act-dot" style="background:${color}"></span>
+            <div class="act-content">
+                <div class="act-text"><strong>${esc(item.agent_name || agent?.name || '')}</strong> ${esc(item.details || item.action)}</div>
+                <div class="act-time" data-time="${item.created_at}">${timeAgo(item.created_at)}</div>
             </div>
-        `;
+        </div>`;
     }).join('');
 }
 
-// ---- Utility Functions ----
-function updateStats() {
-    agentCount.textContent = agents.length;
-    activeCount.textContent = agents.filter(a => a.status === 'working' || a.status === 'idle').length;
+// ===== RENDER: AGENTS FULL VIEW =====
+function renderAgentsView() {
+    agentsFullGrid.innerHTML = agents.map(a => {
+        const s = a.status || 'offline';
+        const classes = ['agent-full-card',
+            s === 'working' ? 'is-working' : '',
+            a.role?.toLowerCase() === 'orchestrator' ? 'is-orchestrator' : ''
+        ].filter(Boolean).join(' ');
+
+        return `<div class="${classes}" style="--card-accent:${a.accent_color || '#3b82f6'}">
+            <div class="afc-header">
+                <div class="afc-avatar">${a.avatar_emoji || '🤖'}</div>
+                <div class="afc-badge ${s}">
+                    <span class="afc-badge-dot"></span>
+                    ${cap(s)}
+                </div>
+            </div>
+            <div class="afc-name">${esc(a.name)}</div>
+            <div class="afc-role">${esc(a.role || 'Agent')}</div>
+            <div class="afc-task">
+                <div class="afc-task-label">Current Task</div>
+                <div class="afc-task-text ${!a.current_task ? 'empty' : ''}">${a.current_task ? esc(a.current_task) : 'No task assigned'}</div>
+            </div>
+            <div class="afc-footer">
+                <span class="afc-model">${esc(a.model || 'N/A')}</span>
+                <span class="afc-accent-dot" style="background:${a.accent_color || '#3b82f6'}"></span>
+            </div>
+        </div>`;
+    }).join('');
 }
 
-function updateUptime() {
-    const mins = Math.floor((Date.now() - startTime) / 60000);
-    if (mins < 60) {
-        uptimeEl.textContent = `${mins}m`;
-    } else {
-        const hrs = Math.floor(mins / 60);
-        const rem = mins % 60;
-        uptimeEl.textContent = `${hrs}h ${rem}m`;
-    }
+// ===== RENDER: ACTIVITY FULL VIEW =====
+function renderActivityView() {
+    activityFullList.innerHTML = activities.map(item => {
+        const agent = agents.find(a => a.id === item.agent_id);
+        const color = agent?.accent_color || '#3b82f6';
+        return `<div class="afl-item">
+            <span class="afl-dot" style="background:${color}"></span>
+            <div class="afl-content">
+                <div class="afl-text"><strong>${esc(item.agent_name || agent?.name || '')}</strong> ${esc(item.details || item.action)}</div>
+                <div class="afl-time" data-time="${item.created_at}">${timeAgo(item.created_at)}</div>
+            </div>
+        </div>`;
+    }).join('');
 }
 
-function updateLastUpdate() {
-    lastUpdate.textContent = new Date().toLocaleTimeString('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
+// ===== NAVIGATION =====
+function setupNavigation() {
+    const views = { dashboard: 'dashboardView', agents: 'agentsView', activity: 'activityView' };
+    const titles = { dashboard: ['Dashboard', 'Real-time agent monitoring'], agents: ['Agents', `${agents.length} agents configured`], activity: ['Activity', 'Full activity log'] };
+
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const view = link.dataset.view;
+
+            // Update nav
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+
+            // Update views
+            document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active'));
+            document.getElementById(views[view]).classList.add('active');
+
+            // Update header
+            document.getElementById('pageTitle').textContent = titles[view][0];
+            document.getElementById('pageSubtitle').textContent = titles[view][1];
+
+            // Render view content on switch
+            if (view === 'agents') renderAgentsView();
+            if (view === 'activity') renderActivityView();
+        });
+    });
+}
+
+// ===== DRAG AND DROP =====
+function setupDragAndDrop() {
+    document.addEventListener('dragstart', (e) => {
+        const card = e.target.closest('.task-card');
+        if (!card) return;
+        draggedTask = card.dataset.taskId;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    });
+
+    document.addEventListener('dragend', (e) => {
+        const card = e.target.closest('.task-card');
+        if (card) card.classList.remove('dragging');
+        document.querySelectorAll('.col-body').forEach(c => c.classList.remove('drag-over'));
+        draggedTask = null;
+    });
+
+    document.querySelectorAll('.col-body').forEach(dropZone => {
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (!draggedTask) return;
+
+            const newStatus = dropZone.dataset.drop;
+            const task = tasks.find(t => t.id === draggedTask);
+            if (!task || task.status === newStatus) return;
+
+            // Optimistic update
+            task.status = newStatus;
+            renderKanban();
+
+            // Persist to Supabase
+            const { error } = await supabase
+                .from('tasks')
+                .update({ status: newStatus, updated_at: new Date().toISOString() })
+                .eq('id', draggedTask);
+
+            if (error) {
+                console.error('Failed to update task:', error);
+                await fetchTasks(); // Revert on failure
+            }
+        });
+    });
+}
+
+// ===== SEARCH =====
+function setupSearch() {
+    searchInput.addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase().trim();
+        if (!q) {
+            renderKanban();
+            return;
+        }
+        // Filter task cards visually
+        document.querySelectorAll('.task-card').forEach(card => {
+            const title = card.querySelector('.task-card-title')?.textContent?.toLowerCase() || '';
+            const agent = card.querySelector('.task-card-agent')?.textContent?.toLowerCase() || '';
+            card.style.display = (title.includes(q) || agent.includes(q)) ? '' : 'none';
+        });
+    });
+}
+
+// ===== UTILITIES =====
+function syncLastUpdate() {
+    lastSyncEl.textContent = new Date().toLocaleTimeString('en-GB', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
         timeZone: 'Europe/Amsterdam'
     });
 }
 
-function updateConnectionUI(connected) {
-    const dot = connectionStatus.querySelector('.status-dot');
-    const text = connectionStatus.querySelector('.status-text');
-    if (connected) {
-        dot.className = 'status-dot status-dot-connected';
-        text.textContent = 'Connected';
-    } else {
-        dot.className = 'status-dot status-dot-disconnected';
-        text.textContent = 'Disconnected';
-    }
+function updateConnection(connected) {
+    const dot = connectionStatus.querySelector('.conn-dot');
+    const text = connectionStatus.querySelector('.conn-text');
+    dot.className = connected ? 'conn-dot connected' : 'conn-dot disconnected';
+    text.textContent = connected ? 'Live' : 'Offline';
 }
 
 function updateRelativeTimes() {
@@ -242,10 +330,7 @@ function updateRelativeTimes() {
 
 function timeAgo(dateStr) {
     if (!dateStr) return 'never';
-    const now = Date.now();
-    const then = new Date(dateStr).getTime();
-    const diff = Math.floor((now - then) / 1000);
-
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
     if (diff < 10) return 'just now';
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
@@ -253,16 +338,25 @@ function timeAgo(dateStr) {
     return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-GB', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        timeZone: 'Europe/Amsterdam'
+    });
 }
 
-function escapeHtml(str) {
+function cap(str) {
     if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ');
 }
 
-// ---- Start ----
+function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+
+// ===== START =====
 init();
