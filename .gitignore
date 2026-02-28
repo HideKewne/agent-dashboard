@@ -4,3 +4,6 @@ node_modules/
 generate_mockups.py
 __pycache__/
 *.pyc
+
+# Local Netlify folder
+.netlify
