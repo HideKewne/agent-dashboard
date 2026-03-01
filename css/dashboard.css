@@ -1147,16 +1147,50 @@ body {
     text-decoration: line-through;
 }
 
-/* Recent Activity (Timeline) */
+/* Recent Activity (Timeline - collapsible) */
 .apc-activity {
     padding: 0 24px 16px;
 }
 
-.apc-activity-list {
+.apc-activity-toggle {
+    cursor: pointer;
+    user-select: none;
     display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s;
+}
+
+.apc-activity-toggle:hover {
+    color: var(--text-primary);
+}
+
+.apc-toggle-arrow {
+    font-size: 9px;
+    transition: transform 0.25s ease;
+    display: inline-block;
+}
+
+.apc-activity.expanded .apc-toggle-arrow {
+    transform: rotate(90deg);
+}
+
+.apc-activity-count {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.apc-activity-list {
+    display: none;
     flex-direction: column;
     gap: 0;
     position: relative;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.apc-activity.expanded .apc-activity-list {
+    display: flex;
 }
 
 .apc-act-item {

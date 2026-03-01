@@ -295,10 +295,12 @@ function renderAgentsView() {
                 }).join('')}
             </div>` : ''}
 
-            <!-- Recent Activity -->
+            <!-- Recent Activity (collapsible) -->
             ${agentActivity.length > 0 ? `
             <div class="apc-activity">
-                <div class="apc-section-label">Recent Activity</div>
+                <div class="apc-section-label apc-activity-toggle" onclick="this.parentElement.classList.toggle('expanded')">
+                    <span class="apc-toggle-arrow">&#9654;</span> Recent Activity <span class="apc-activity-count">(${agentActivity.length})</span>
+                </div>
                 <div class="apc-activity-list">
                     ${agentActivity.map(act => `
                         <div class="apc-act-item">
