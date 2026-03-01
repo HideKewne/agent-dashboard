@@ -926,6 +926,91 @@ body {
     color: var(--text-muted);
 }
 
+/* Agent Stats Row */
+.afc-stats {
+    display: flex;
+    gap: 1px;
+    margin-bottom: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.afc-stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 8px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.afc-stat-count {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.afc-stat-label {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+
+/* Agent Task List */
+.afc-task-list {
+    margin-bottom: 16px;
+}
+
+.afc-task-list .afc-task-label {
+    margin-bottom: 8px;
+}
+
+.afc-task-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    transition: background 0.2s;
+}
+
+.afc-task-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.afc-task-icon {
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.afc-task-item-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.afc-task-item.done {
+    opacity: 0.5;
+}
+
+.afc-task-item.done .afc-task-item-title {
+    text-decoration: line-through;
+}
+
+.afc-task-item.in_progress {
+    background: rgba(234, 179, 8, 0.06);
+    color: var(--text-primary);
+}
+
 .agents-empty {
     display: flex;
     align-items: center;

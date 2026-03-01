@@ -177,6 +177,19 @@ function renderAgentsView() {
 
         const lastSeen = a.last_seen ? timeAgo(a.last_seen) : 'never';
 
+        // Count tasks by status for this agent
+        const agentTasks = tasks.filter(t => t.agent_id === a.id);
+        const taskCounts = {
+            todo: agentTasks.filter(t => t.status === 'todo').length,
+            in_progress: agentTasks.filter(t => t.status === 'in_progress').length,
+            done: agentTasks.filter(t => t.status === 'done').length,
+        };
+        const totalTasks = agentTasks.length;
+
+        // Get the active task (in_progress) for display
+        const activeTask = agentTasks.find(t => t.status === 'in_progress');
+        const taskDisplay = activeTask ? activeTask.title : (a.current_task || null);
+
         return `<div class="${classes}" style="--card-accent:${a.accent_color || '#3b82f6'}">
             <div class="afc-header">
                 <div class="afc-avatar">${a.avatar_emoji || '🤖'}</div>
@@ -189,11 +202,36 @@ function renderAgentsView() {
             <div class="afc-role">${esc(a.role || 'Agent')}</div>
             <div class="afc-task">
                 <div class="afc-task-label">Current Task</div>
-                <div class="afc-task-text ${!a.current_task ? 'empty' : ''}">${a.current_task ? esc(a.current_task) : 'No task assigned'}</div>
+                <div class="afc-task-text ${!taskDisplay ? 'empty' : ''}">${taskDisplay ? esc(taskDisplay) : 'No task assigned'}</div>
             </div>
+            <div class="afc-stats">
+                <div class="afc-stat">
+                    <span class="afc-stat-count">${taskCounts.in_progress}</span>
+                    <span class="afc-stat-label">Active</span>
+                </div>
+                <div class="afc-stat">
+                    <span class="afc-stat-count">${taskCounts.todo}</span>
+                    <span class="afc-stat-label">Queued</span>
+                </div>
+                <div class="afc-stat">
+                    <span class="afc-stat-count">${taskCounts.done}</span>
+                    <span class="afc-stat-label">Done</span>
+                </div>
+            </div>
+            ${agentTasks.length > 0 ? `
+            <div class="afc-task-list">
+                <div class="afc-task-label">Task History</div>
+                ${agentTasks.slice(0, 5).map(t => {
+                    const icon = { todo: '📋', in_progress: '⚡', done: '✅', archived: '📦' }[t.status] || '📋';
+                    return `<div class="afc-task-item ${t.status}">
+                        <span class="afc-task-icon">${icon}</span>
+                        <span class="afc-task-item-title">${esc(t.title)}</span>
+                    </div>`;
+                }).join('')}
+            </div>` : ''}
             <div class="afc-footer">
                 <span class="afc-model">${esc(a.model || 'N/A')}</span>
-                <span class="afc-last-seen">Last seen: ${lastSeen}</span>
+                <span class="afc-last-seen" data-time="${a.last_seen || ''}">Last seen: ${lastSeen}</span>
             </div>
         </div>`;
     }).join('');
