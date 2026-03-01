@@ -1005,11 +1005,11 @@ body {
 }
 
 .apc-current-task.has-task {
-    background: rgba(234, 179, 8, 0.03);
+    /* No background change - keep consistent with rest of card */
 }
 
 .apc-current-task.task-completed {
-    background: rgba(16, 185, 129, 0.05);
+    /* No background change - keep consistent with rest of card */
 }
 
 .apc-task-active {

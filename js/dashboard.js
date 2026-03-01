@@ -389,9 +389,18 @@ function setupNavigation() {
         document.getElementById('pageTitle').textContent = titles[view];
         document.getElementById('pageSubtitle').textContent = getSubtitle(view);
 
+        // Update URL hash for persistence
+        window.location.hash = view;
+
         // Render view content on switch
         if (view === 'agents') renderAgentsView();
         if (view === 'activity') renderActivityView();
+    }
+
+    // Check URL hash on load and switch to that view
+    const hashView = window.location.hash.replace('#', '');
+    if (hashView && ['dashboard', 'agents', 'activity'].includes(hashView)) {
+        switchView(hashView);
     }
 
     // Sidebar links
