@@ -227,6 +227,7 @@ function renderAgentsView() {
         // Active task
         const activeTask = agentTasks.find(t => t.status === 'in_progress');
         const taskDisplay = activeTask ? activeTask.title : (a.current_task || null);
+        const taskCompleted = !activeTask && taskDisplay && /^completed/i.test(taskDisplay);
 
         // Agent-specific activity (last 8)
         const agentActivity = activities.filter(act => act.agent_id === a.id).slice(0, 8);
@@ -248,11 +249,11 @@ function renderAgentsView() {
             </div>
 
             <!-- Current Task Panel -->
-            <div class="apc-current-task ${taskDisplay ? 'has-task' : ''}">
+            <div class="apc-current-task ${taskDisplay ? 'has-task' : ''} ${taskCompleted ? 'task-completed' : ''}">
                 <div class="apc-section-label">Current Task</div>
                 ${taskDisplay ? `
                     <div class="apc-task-active">
-                        <span class="apc-task-pulse"></span>
+                        <span class="apc-task-pulse ${taskCompleted ? 'pulse-green' : ''}"></span>
                         <span class="apc-task-title">${esc(taskDisplay)}</span>
                     </div>
                 ` : `

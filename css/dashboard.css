@@ -1008,6 +1008,10 @@ body {
     background: rgba(234, 179, 8, 0.03);
 }
 
+.apc-current-task.task-completed {
+    background: rgba(16, 185, 129, 0.05);
+}
+
 .apc-task-active {
     display: flex;
     align-items: center;
@@ -1025,6 +1029,17 @@ body {
     box-shadow: 0 0 8px rgba(234, 179, 8, 0.5);
     animation: pulse 2s ease-in-out infinite;
     flex-shrink: 0;
+}
+
+.apc-task-pulse.pulse-green {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    animation: pulseGreen 2s ease-in-out infinite;
+}
+
+@keyframes pulseGreen {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+    50% { opacity: 0.5; box-shadow: 0 0 16px rgba(16, 185, 129, 0.3); }
 }
 
 .apc-task-title {
