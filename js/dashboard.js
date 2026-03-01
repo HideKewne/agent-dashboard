@@ -513,5 +513,88 @@ function esc(str) {
     return d.innerHTML;
 }
 
+// ===== ADD TASK MODAL =====
+function setupAddTaskModal() {
+    const modal = document.getElementById('taskModal');
+    const openBtn = document.getElementById('addTaskBtn');
+    const closeBtn = document.getElementById('modalClose');
+    const cancelBtn = document.getElementById('modalCancel');
+    const form = document.getElementById('taskForm');
+    const agentSelect = document.getElementById('taskAgent');
+
+    function openModal() {
+        // Populate agent dropdown
+        agentSelect.innerHTML = agents.map(a =>
+            `<option value="${a.id}">${a.avatar_emoji || '🤖'} ${esc(a.name)}</option>`
+        ).join('');
+        if (agents.length === 0) {
+            agentSelect.innerHTML = '<option value="">No agents available</option>';
+        }
+        modal.classList.add('active');
+        document.getElementById('taskTitle').focus();
+    }
+
+    function closeModal() {
+        modal.classList.remove('active');
+        form.reset();
+    }
+
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    // Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = form.querySelector('.btn-submit');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+
+        const title = document.getElementById('taskTitle').value.trim();
+        const description = document.getElementById('taskDesc').value.trim();
+        const status = document.getElementById('taskStatus').value;
+        const agentId = document.getElementById('taskAgent').value || null;
+
+        const { data, error } = await supabase
+            .from('tasks')
+            .insert([{
+                title,
+                description: description || null,
+                status,
+                agent_id: agentId,
+                position: tasks.length,
+            }])
+            .select();
+
+        if (error) {
+            console.error('Failed to create task:', error);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Task';
+            return;
+        }
+
+        // Log activity
+        const agent = agents.find(a => a.id === agentId);
+        await supabase.from('activity_log').insert([{
+            agent_id: agentId,
+            agent_name: agent?.name || 'Manual',
+            action: 'task_created',
+            details: `Created task: ${title}`,
+        }]);
+
+        closeModal();
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create Task';
+        await fetchTasks();
+        renderAgentsView();
+    });
+}
+
 // ===== START =====
 init();
+setupAddTaskModal();
