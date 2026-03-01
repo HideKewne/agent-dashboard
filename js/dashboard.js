@@ -163,19 +163,43 @@ function renderActivityRail() {
 }
 
 // ===== RENDER: AGENTS FULL VIEW =====
+function renderAgentsSummary() {
+    const el = document.getElementById('agentsSummary');
+    if (!el) return;
+    const online = agents.filter(a => a.status === 'working').length;
+    const idle = agents.filter(a => a.status === 'idle').length;
+    const offline = agents.filter(a => a.status === 'offline' || !a.status).length;
+    const totalTasks = tasks.length;
+    const activeTasks = tasks.filter(t => t.status === 'in_progress').length;
+
+    el.innerHTML = `
+        <div class="avs-item"><span class="avs-count">${agents.length}</span><span class="avs-label">Total Agents</span></div>
+        <div class="avs-divider"></div>
+        <div class="avs-item"><span class="avs-dot working"></span><span class="avs-count">${online}</span><span class="avs-label">Online</span></div>
+        <div class="avs-item"><span class="avs-dot idle"></span><span class="avs-count">${idle}</span><span class="avs-label">Idle</span></div>
+        <div class="avs-item"><span class="avs-dot offline"></span><span class="avs-count">${offline}</span><span class="avs-label">Offline</span></div>
+        <div class="avs-divider"></div>
+        <div class="avs-item"><span class="avs-count">${activeTasks}</span><span class="avs-label">Active Tasks</span></div>
+        <div class="avs-item"><span class="avs-count">${totalTasks}</span><span class="avs-label">Total Tasks</span></div>
+    `;
+}
+
 function renderAgentsView() {
+    renderAgentsSummary();
     if (agents.length === 0) {
-        agentsFullGrid.innerHTML = '<div class="agents-empty">No agents registered</div>';
+        agentsFullGrid.innerHTML = '<div class="agents-empty"><div class="agents-empty-icon">🐾</div><div class="agents-empty-text">No agents registered</div><div class="agents-empty-sub">Agents will appear here when they come online</div></div>';
         return;
     }
+
     agentsFullGrid.innerHTML = agents.map(a => {
         const s = a.status || 'offline';
-        const classes = ['agent-full-card',
+        const classes = ['agent-profile-card',
             s === 'working' ? 'is-working' : '',
             a.role?.toLowerCase().includes('orchestrator') ? 'is-orchestrator' : ''
         ].filter(Boolean).join(' ');
 
         const lastSeen = a.last_seen ? timeAgo(a.last_seen) : 'never';
+        const uptimeStr = a.last_seen ? getUptime(a.created_at) : 'N/A';
 
         // Count tasks by status for this agent
         const agentTasks = tasks.filter(t => t.agent_id === a.id);
@@ -183,58 +207,124 @@ function renderAgentsView() {
             todo: agentTasks.filter(t => t.status === 'todo').length,
             in_progress: agentTasks.filter(t => t.status === 'in_progress').length,
             done: agentTasks.filter(t => t.status === 'done').length,
+            archived: agentTasks.filter(t => t.status === 'archived').length,
         };
-        const totalTasks = agentTasks.length;
 
-        // Get the active task (in_progress) for display
+        // Active task
         const activeTask = agentTasks.find(t => t.status === 'in_progress');
         const taskDisplay = activeTask ? activeTask.title : (a.current_task || null);
 
+        // Agent-specific activity (last 8)
+        const agentActivity = activities.filter(act => act.agent_id === a.id).slice(0, 8);
+
         return `<div class="${classes}" style="--card-accent:${a.accent_color || '#3b82f6'}">
-            <div class="afc-header">
-                <div class="afc-avatar">${a.avatar_emoji || '🤖'}</div>
-                <div class="afc-badge ${s}">
-                    <span class="afc-badge-dot"></span>
+            <!-- Header: Avatar + Identity + Status -->
+            <div class="apc-header">
+                <div class="apc-identity">
+                    <div class="apc-avatar">${a.avatar_emoji || '🤖'}</div>
+                    <div class="apc-identity-text">
+                        <div class="apc-name">${esc(a.name)}</div>
+                        <div class="apc-role">${esc(a.role || 'Agent')}</div>
+                    </div>
+                </div>
+                <div class="apc-status-badge ${s}">
+                    <span class="apc-status-dot"></span>
                     ${statusLabel(s)}
                 </div>
             </div>
-            <div class="afc-name">${esc(a.name)}</div>
-            <div class="afc-role">${esc(a.role || 'Agent')}</div>
-            <div class="afc-task">
-                <div class="afc-task-label">Current Task</div>
-                <div class="afc-task-text ${!taskDisplay ? 'empty' : ''}">${taskDisplay ? esc(taskDisplay) : 'No task assigned'}</div>
+
+            <!-- Current Task Panel -->
+            <div class="apc-current-task ${taskDisplay ? 'has-task' : ''}">
+                <div class="apc-section-label">Current Task</div>
+                ${taskDisplay ? `
+                    <div class="apc-task-active">
+                        <span class="apc-task-pulse"></span>
+                        <span class="apc-task-title">${esc(taskDisplay)}</span>
+                    </div>
+                ` : `
+                    <div class="apc-task-idle">No active task</div>
+                `}
             </div>
-            <div class="afc-stats">
-                <div class="afc-stat">
-                    <span class="afc-stat-count">${taskCounts.in_progress}</span>
-                    <span class="afc-stat-label">Active</span>
+
+            <!-- Stats Grid -->
+            <div class="apc-stats">
+                <div class="apc-stat">
+                    <span class="apc-stat-value">${taskCounts.in_progress}</span>
+                    <span class="apc-stat-key">Active</span>
                 </div>
-                <div class="afc-stat">
-                    <span class="afc-stat-count">${taskCounts.todo}</span>
-                    <span class="afc-stat-label">Queued</span>
+                <div class="apc-stat">
+                    <span class="apc-stat-value">${taskCounts.todo}</span>
+                    <span class="apc-stat-key">Queued</span>
                 </div>
-                <div class="afc-stat">
-                    <span class="afc-stat-count">${taskCounts.done}</span>
-                    <span class="afc-stat-label">Done</span>
+                <div class="apc-stat">
+                    <span class="apc-stat-value">${taskCounts.done}</span>
+                    <span class="apc-stat-key">Done</span>
+                </div>
+                <div class="apc-stat">
+                    <span class="apc-stat-value">${taskCounts.archived}</span>
+                    <span class="apc-stat-key">Archived</span>
                 </div>
             </div>
+
+            <!-- Task Queue -->
             ${agentTasks.length > 0 ? `
-            <div class="afc-task-list">
-                <div class="afc-task-label">Task History</div>
-                ${agentTasks.slice(0, 5).map(t => {
+            <div class="apc-task-queue">
+                <div class="apc-section-label">Tasks</div>
+                ${agentTasks.slice(0, 6).map(t => {
                     const icon = { todo: '📋', in_progress: '⚡', done: '✅', archived: '📦' }[t.status] || '📋';
-                    return `<div class="afc-task-item ${t.status}">
-                        <span class="afc-task-icon">${icon}</span>
-                        <span class="afc-task-item-title">${esc(t.title)}</span>
+                    return `<div class="apc-queue-item ${t.status}">
+                        <span class="apc-queue-icon">${icon}</span>
+                        <span class="apc-queue-title">${esc(t.title)}</span>
+                        <span class="apc-queue-badge">${cap(t.status)}</span>
                     </div>`;
                 }).join('')}
             </div>` : ''}
-            <div class="afc-footer">
-                <span class="afc-model">${esc(a.model || 'N/A')}</span>
-                <span class="afc-last-seen" data-time="${a.last_seen || ''}">Last seen: ${lastSeen}</span>
+
+            <!-- Recent Activity -->
+            ${agentActivity.length > 0 ? `
+            <div class="apc-activity">
+                <div class="apc-section-label">Recent Activity</div>
+                <div class="apc-activity-list">
+                    ${agentActivity.map(act => `
+                        <div class="apc-act-item">
+                            <div class="apc-act-line"></div>
+                            <div class="apc-act-content">
+                                <div class="apc-act-text">${esc(act.details || act.action)}</div>
+                                <div class="apc-act-time" data-time="${act.created_at}">${timeAgo(act.created_at)}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>` : ''}
+
+            <!-- Footer: Model + Meta -->
+            <div class="apc-footer">
+                <div class="apc-meta-row">
+                    <span class="apc-meta-label">Model</span>
+                    <span class="apc-meta-value apc-model-tag">${esc(a.model || 'N/A')}</span>
+                </div>
+                <div class="apc-meta-row">
+                    <span class="apc-meta-label">Uptime</span>
+                    <span class="apc-meta-value">${uptimeStr}</span>
+                </div>
+                <div class="apc-meta-row">
+                    <span class="apc-meta-label">Last Seen</span>
+                    <span class="apc-meta-value" data-time="${a.last_seen || ''}">${lastSeen}</span>
+                </div>
             </div>
         </div>`;
     }).join('');
+}
+
+function getUptime(createdAt) {
+    if (!createdAt) return 'N/A';
+    const diff = Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000);
+    if (diff < 60) return `${diff}s`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+    const days = Math.floor(diff / 86400);
+    const hrs = Math.floor((diff % 86400) / 3600);
+    return `${days}d ${hrs}h`;
 }
 
 // ===== RENDER: ACTIVITY FULL VIEW =====
@@ -255,7 +345,15 @@ function renderActivityView() {
 // ===== NAVIGATION =====
 function setupNavigation() {
     const views = { dashboard: 'dashboardView', agents: 'agentsView', activity: 'activityView' };
-    const titles = { dashboard: ['Dashboard', 'Real-time agent monitoring'], agents: ['Agents', `${agents.length} agents configured`], activity: ['Activity', 'Full activity log'] };
+    const getSubtitle = (view) => {
+        if (view === 'agents') {
+            const online = agents.filter(a => a.status === 'working').length;
+            return `${agents.length} agent${agents.length !== 1 ? 's' : ''} registered, ${online} online`;
+        }
+        if (view === 'activity') return `${activities.length} events logged`;
+        return 'Real-time agent monitoring';
+    };
+    const titles = { dashboard: 'Dashboard', agents: 'Agents', activity: 'Activity' };
 
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -271,8 +369,8 @@ function setupNavigation() {
             document.getElementById(views[view]).classList.add('active');
 
             // Update header
-            document.getElementById('pageTitle').textContent = titles[view][0];
-            document.getElementById('pageSubtitle').textContent = titles[view][1];
+            document.getElementById('pageTitle').textContent = titles[view];
+            document.getElementById('pageSubtitle').textContent = getSubtitle(view);
 
             // Render view content on switch
             if (view === 'agents') renderAgentsView();
