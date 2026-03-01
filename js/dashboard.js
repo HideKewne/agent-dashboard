@@ -26,14 +26,20 @@ const activityFullList = document.getElementById('activityFullList');
 
 // ===== INIT =====
 async function init() {
-    await Promise.all([fetchAgents(), fetchTasks(), fetchActivity()]);
-    renderAgentsView();
-    renderActivityView();
-    subscribeRealtime();
+    // Wire up navigation FIRST so view switching always works
     setupNavigation();
     setupDragAndDrop();
     setupSearch();
     clearActivityBtn.addEventListener('click', () => { activities = []; renderActivityRail(); });
+
+    try {
+        await Promise.all([fetchAgents(), fetchTasks(), fetchActivity()]);
+        renderAgentsView();
+        renderActivityView();
+        subscribeRealtime();
+    } catch (e) {
+        console.error('Init data load error:', e);
+    }
     setInterval(updateRelativeTimes, 30000);
 }
 
