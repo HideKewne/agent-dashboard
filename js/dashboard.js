@@ -248,18 +248,16 @@ function renderAgentsView() {
                 </div>
             </div>
 
-            <!-- Current Task Panel -->
-            <div class="apc-current-task ${taskDisplay ? 'has-task' : ''} ${taskCompleted ? 'task-completed' : ''}">
+            <!-- Current Task Panel (only shown if there's a task) -->
+            ${taskDisplay ? `
+            <div class="apc-current-task has-task ${taskCompleted ? 'task-completed' : ''}">
                 <div class="apc-section-label">Current Task</div>
-                ${taskDisplay ? `
-                    <div class="apc-task-active">
-                        <span class="apc-task-pulse ${taskCompleted ? 'pulse-green' : ''}"></span>
-                        <span class="apc-task-title">${esc(taskDisplay)}</span>
-                    </div>
-                ` : `
-                    <div class="apc-task-idle">No active task</div>
-                `}
+                <div class="apc-task-active">
+                    <span class="apc-task-pulse ${taskCompleted ? 'pulse-green' : ''}"></span>
+                    <span class="apc-task-title">${esc(taskDisplay)}</span>
+                </div>
             </div>
+            ` : ''}
 
             <!-- Stats Grid -->
             <div class="apc-stats">
