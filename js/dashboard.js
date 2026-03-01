@@ -361,26 +361,43 @@ function setupNavigation() {
     };
     const titles = { dashboard: 'Dashboard', agents: 'Agents', activity: 'Activity' };
 
+    function switchView(view) {
+        // Update sidebar nav
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        const sidebarLink = document.querySelector(`.nav-link[data-view="${view}"]`);
+        if (sidebarLink) sidebarLink.classList.add('active');
+
+        // Update mobile nav
+        document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
+        const mobileBtn = document.querySelector(`.mobile-nav-btn[data-view="${view}"]`);
+        if (mobileBtn) mobileBtn.classList.add('active');
+
+        // Update views
+        document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active'));
+        document.getElementById(views[view]).classList.add('active');
+
+        // Update header
+        document.getElementById('pageTitle').textContent = titles[view];
+        document.getElementById('pageSubtitle').textContent = getSubtitle(view);
+
+        // Render view content on switch
+        if (view === 'agents') renderAgentsView();
+        if (view === 'activity') renderActivityView();
+    }
+
+    // Sidebar links
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            const view = link.dataset.view;
+            switchView(link.dataset.view);
+        });
+    });
 
-            // Update nav
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-
-            // Update views
-            document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active'));
-            document.getElementById(views[view]).classList.add('active');
-
-            // Update header
-            document.getElementById('pageTitle').textContent = titles[view];
-            document.getElementById('pageSubtitle').textContent = getSubtitle(view);
-
-            // Render view content on switch
-            if (view === 'agents') renderAgentsView();
-            if (view === 'activity') renderActivityView();
+    // Mobile bottom nav
+    document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchView(btn.dataset.view);
         });
     });
 }
