@@ -135,8 +135,16 @@ function renderKanban() {
 
         col.innerHTML = filtered.map(t => {
             const agent = agents.find(a => a.id === t.agent_id);
+            const statusClass = { todo: 'todo', in_progress: 'in-progress', done: 'done', archived: 'archived' }[t.status] || 'todo';
+            const statusText = { todo: 'To Do', in_progress: 'In Progress', done: 'Done', archived: 'Archived' }[t.status] || t.status;
             return `<div class="task-card" draggable="true" data-task-id="${t.id}">
-                <div class="task-card-title">${esc(t.title)}</div>
+                <div class="task-card-header">
+                    <div class="task-card-title">${esc(t.title)}</div>
+                    <span class="task-status-badge ${statusClass}">
+                        <span class="task-status-dot"></span>
+                        ${statusText}
+                    </span>
+                </div>
                 <div class="task-card-meta">
                     <div class="task-card-agent">
                         <span class="task-agent-dot" style="background:${agent?.accent_color || '#6b7280'}"></span>
