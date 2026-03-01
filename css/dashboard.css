@@ -994,7 +994,7 @@ body {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     margin-bottom: 8px;
 }
 
@@ -1049,7 +1049,7 @@ body {
 
 .apc-task-idle {
     font-size: 13px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-style: italic;
 }
 
