@@ -27,6 +27,8 @@ const activityFullList = document.getElementById('activityFullList');
 // ===== INIT =====
 async function init() {
     await Promise.all([fetchAgents(), fetchTasks(), fetchActivity()]);
+    renderAgentsView();
+    renderActivityView();
     subscribeRealtime();
     setupNavigation();
     setupDragAndDrop();
@@ -162,12 +164,18 @@ function renderActivityRail() {
 
 // ===== RENDER: AGENTS FULL VIEW =====
 function renderAgentsView() {
+    if (agents.length === 0) {
+        agentsFullGrid.innerHTML = '<div class="agents-empty">No agents registered</div>';
+        return;
+    }
     agentsFullGrid.innerHTML = agents.map(a => {
         const s = a.status || 'offline';
         const classes = ['agent-full-card',
             s === 'working' ? 'is-working' : '',
             a.role?.toLowerCase().includes('orchestrator') ? 'is-orchestrator' : ''
         ].filter(Boolean).join(' ');
+
+        const lastSeen = a.last_seen ? timeAgo(a.last_seen) : 'never';
 
         return `<div class="${classes}" style="--card-accent:${a.accent_color || '#3b82f6'}">
             <div class="afc-header">
@@ -185,7 +193,7 @@ function renderAgentsView() {
             </div>
             <div class="afc-footer">
                 <span class="afc-model">${esc(a.model || 'N/A')}</span>
-                <span class="afc-accent-dot" style="background:${a.accent_color || '#3b82f6'}"></span>
+                <span class="afc-last-seen">Last seen: ${lastSeen}</span>
             </div>
         </div>`;
     }).join('');

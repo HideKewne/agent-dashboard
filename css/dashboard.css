@@ -920,10 +920,20 @@ body {
     border-radius: 4px;
 }
 
-.afc-accent-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
+.afc-last-seen {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+}
+
+.agents-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+    grid-column: 1 / -1;
 }
 
 /* ===== ACTIVITY FULL VIEW ===== */
