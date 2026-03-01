@@ -6,7 +6,7 @@
 const SUPABASE_URL = 'https://dpdtxmhxyosunfryocqn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwZHR4bWh4eW9zdW5mcnlvY3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNjUwNDcsImV4cCI6MjA2OTg0MTA0N30.fOfk2ULUtNXzpQFEsMXD4mNZLNc4hSAh12NTJrSe0Vk';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // State
 let agents = [];
@@ -45,26 +45,26 @@ async function init() {
 
 // ===== DATA FETCHING =====
 async function fetchAgents() {
-    const { data, error } = await supabase
+    const { data, error } = await db
         .from('agents').select('*').order('created_at');
     if (!error && data) { agents = data; renderAgentStrip(); }
 }
 
 async function fetchTasks() {
-    const { data, error } = await supabase
+    const { data, error } = await db
         .from('tasks').select('*').order('position').order('created_at');
     if (!error && data) { tasks = data; renderKanban(); }
 }
 
 async function fetchActivity() {
-    const { data, error } = await supabase
+    const { data, error } = await db
         .from('activity_log').select('*').order('created_at', { ascending: false }).limit(50);
     if (!error && data) { activities = data; renderActivityRail(); }
 }
 
 // ===== REALTIME =====
 function subscribeRealtime() {
-    supabase.channel('all-changes')
+    db.channel('all-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'agents' }, (p) => {
             handleChange(agents, p);
             renderAgentStrip();
@@ -444,7 +444,7 @@ function setupDragAndDrop() {
             renderKanban();
 
             // Persist to Supabase
-            const { error } = await supabase
+            const { error } = await db
                 .from('tasks')
                 .update({ status: newStatus, updated_at: new Date().toISOString() })
                 .eq('id', draggedTask);
@@ -583,7 +583,7 @@ function setupAddTaskModal() {
         const status = document.getElementById('taskStatus').value;
         const agentId = document.getElementById('taskAgent').value || null;
 
-        const { data, error } = await supabase
+        const { data, error } = await db
             .from('tasks')
             .insert([{
                 title,
@@ -603,7 +603,7 @@ function setupAddTaskModal() {
 
         // Log activity
         const agent = agents.find(a => a.id === agentId);
-        await supabase.from('activity_log').insert([{
+        await db.from('activity_log').insert([{
             agent_id: agentId,
             agent_name: agent?.name || 'Manual',
             action: 'task_created',
