@@ -410,23 +410,26 @@ body {
 .chip-status {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
     flex-shrink: 0;
+    padding: 4px 12px;
+    border-radius: 100px;
 }
 
 .chip-status-dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background: currentColor;
 }
 
 .chip-status.working {
     color: var(--status-working);
+    background: rgba(16, 185, 129, 0.12);
 }
 
 .chip-status.working .chip-status-dot {
@@ -436,14 +439,17 @@ body {
 
 .chip-status.idle {
     color: var(--status-idle);
+    background: rgba(234, 179, 8, 0.12);
 }
 
 .chip-status.blocked {
     color: var(--status-blocked);
+    background: rgba(239, 68, 68, 0.12);
 }
 
 .chip-status.offline {
     color: var(--status-offline);
+    background: rgba(107, 114, 128, 0.12);
 }
 
 /* ===== KANBAN BOARD ===== */

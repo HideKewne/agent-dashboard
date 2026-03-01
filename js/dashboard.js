@@ -110,7 +110,7 @@ function renderAgentStrip() {
             </div>
             <div class="chip-status ${s}">
                 <span class="chip-status-dot"></span>
-                ${cap(s)}
+                ${statusLabel(s)}
             </div>
         </div>`;
     }).join('');
@@ -174,7 +174,7 @@ function renderAgentsView() {
                 <div class="afc-avatar">${a.avatar_emoji || '🤖'}</div>
                 <div class="afc-badge ${s}">
                     <span class="afc-badge-dot"></span>
-                    ${cap(s)}
+                    ${statusLabel(s)}
                 </div>
             </div>
             <div class="afc-name">${esc(a.name)}</div>
@@ -344,6 +344,17 @@ function formatDate(dateStr) {
         month: 'short', day: 'numeric', year: 'numeric',
         timeZone: 'Europe/Amsterdam'
     });
+}
+
+function statusLabel(str) {
+    if (!str) return 'Offline';
+    const labels = {
+        working: 'Connected',
+        idle: 'Idle',
+        blocked: 'Blocked',
+        offline: 'Offline'
+    };
+    return labels[str] || cap(str);
 }
 
 function cap(str) {
