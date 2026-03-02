@@ -47,6 +47,14 @@ async function init() {
         console.error('Init data load error:', e);
     }
     setInterval(updateRelativeTimes, 30000);
+
+    // Polling fallback - refresh data every 10 seconds in case realtime isn't working
+    setInterval(async () => {
+        await Promise.all([fetchAgents(), fetchTasks()]);
+        renderAgentStrip();
+        renderKanban();
+        syncLastUpdate();
+    }, 10000);
 }
 
 // ===== DATA FETCHING =====
