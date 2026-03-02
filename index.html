@@ -38,6 +38,10 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                     <span>Activity</span>
                 </a>
+                <a href="#" class="nav-link" data-view="analytics">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    <span>Analytics</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <div class="connection-indicator" id="connectionStatus">
@@ -85,6 +89,10 @@
                         <div class="modal-field">
                             <label for="taskDesc">Description <span class="optional">(optional)</span></label>
                             <textarea id="taskDesc" placeholder="Additional details..." rows="3"></textarea>
+                        </div>
+                        <div class="task-estimate" id="taskEstimate" style="display:none;">
+                            <span class="estimate-icon">⏱️</span>
+                            <span class="estimate-text"></span>
                         </div>
                         <div class="modal-row">
                             <div class="modal-field">
@@ -179,6 +187,80 @@
                     <!-- Populated by JS -->
                 </div>
             </div>
+
+            <!-- Analytics View -->
+            <div class="view-panel" id="analyticsView">
+                <!-- Summary Cards -->
+                <div class="analytics-summary" id="analyticsSummary">
+                    <div class="analytics-card">
+                        <div class="analytics-card-icon">🚫</div>
+                        <div class="analytics-card-content">
+                            <div class="analytics-card-value" id="totalRejections">0</div>
+                            <div class="analytics-card-label">Total Rejections</div>
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <div class="analytics-card-icon">📅</div>
+                        <div class="analytics-card-content">
+                            <div class="analytics-card-value" id="weeklyRejections">0</div>
+                            <div class="analytics-card-label">This Week</div>
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <div class="analytics-card-icon">📊</div>
+                        <div class="analytics-card-content">
+                            <div class="analytics-card-value" id="rejectionRate">0%</div>
+                            <div class="analytics-card-label">Rejection Rate</div>
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <div class="analytics-card-icon">⏱️</div>
+                        <div class="analytics-card-content">
+                            <div class="analytics-card-value" id="avgFixTime">-</div>
+                            <div class="analytics-card-label">Avg Fix Time</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="analytics-charts">
+                    <div class="analytics-chart-card">
+                        <h3>Rejection Trends</h3>
+                        <div class="chart-placeholder" id="rejectionTrendsChart">
+                            <div class="chart-bars" id="trendBars">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="analytics-chart-card">
+                        <h3>Top Rejection Reasons</h3>
+                        <div class="reasons-list" id="topReasons">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Rejections Table -->
+                <div class="analytics-table-card">
+                    <h3>Recent Rejections</h3>
+                    <div class="rejections-table-wrap">
+                        <table class="rejections-table">
+                            <thead>
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Reason</th>
+                                    <th>Severity</th>
+                                    <th>Time to Fix</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rejectionsTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <!-- Activity Sidebar -->
@@ -208,6 +290,10 @@
         <a href="#" class="mobile-nav-btn" data-view="activity">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             <span>Activity</span>
+        </a>
+        <a href="#" class="mobile-nav-btn" data-view="analytics">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span>Analytics</span>
         </a>
     </nav>
 
