@@ -967,7 +967,7 @@ function formatDate(dateStr) {
 function statusLabel(str) {
     if (!str) return 'Offline';
     const labels = {
-        working: 'Connected',
+        working: 'Working',
         idle: 'Idle',
         blocked: 'Blocked',
         offline: 'Offline'
